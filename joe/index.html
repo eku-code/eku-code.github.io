@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Табачный Джо — карта лояльности</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/client-app.css">
+</head>
+<body>
+
+<!-- Экран-гейт: авторизация по Telegram initData; приложение доступно только внутри Telegram.
+     Если открыто не из клиента/бота — остаётся с предложением открыть бота -->
+<div id="gate" class="gate">
+    <div class="gate-card">
+        <div class="gate-logo"><i class="fas fa-leaf"></i></div>
+        <div class="gate-title">Табачный Джо</div>
+        <div class="gate-text" id="gateText">Запускаем приложение…</div>
+        <div class="gate-loader" id="gateLoader"></div>
+        <button class="btn btn-accent gate-btn d-none" id="gateBtn"><i class="fas fa-paper-plane"></i>Открыть бота</button>
+    </div>
+</div>
+
+<!-- ==== Шапка ==== -->
+<header class="app-header">
+    <div class="brand">
+        <span class="brand-logo"><i class="fas fa-leaf"></i></span>
+        <div>
+            <div class="brand-name">Табачный Джо</div>
+            <div class="brand-sub" id="headerUser">карта постоянного клиента</div>
+        </div>
+    </div>
+    <span class="header-chip" id="headerCashback" title="Ваш кэшбэк"><i class="fas fa-percent"></i><span>3%</span></span>
+</header>
+
+<main class="content">
+
+    <!-- ======================= ЭКРАН: МОЯ КАРТА ======================= -->
+    <section class="view active" id="view-card">
+
+        <!-- Состояние: карты ещё нет -->
+        <div id="cardEmpty" class="empty-state">
+            <div class="empty-icon"><i class="fas fa-credit-card"></i></div>
+            <h2>Ваша карта лояльности</h2>
+            <p>Копите баллы с каждой покупки и оплачивайте ими до 30% следующего чека.</p>
+            <button class="btn btn-accent btn-big" data-goto="issue">
+                <i class="fas fa-bolt"></i>Выпустить карту
+            </button>
+            <button class="btn btn-ghost btn-big" data-goto="old">
+                <i class="fas fa-clock-rotate-left"></i>У меня есть старая карта
+            </button>
+        </div>
+
+        <!-- Состояние: карта выпущена -->
+        <div id="cardReady" class="d-none">
+            <div class="loyalty-card" id="loyaltyCard">
+                <div class="lc-glow"></div>
+                <div class="lc-top">
+                    <span class="lc-brand"><i class="fas fa-leaf"></i> ТАБАЧНЫЙ ДЖО</span>
+                    <span class="lc-cashback" id="lcCashback">3%</span>
+                </div>
+                <div class="lc-number" id="lcNumber">L000000</div>
+                <div class="lc-holder">
+                    <i class="fas fa-user"></i><span id="lcHolder">Клиент</span>
+                </div>
+                <div class="lc-balance-row">
+                    <div class="lc-balance">
+                        <div class="lc-balance-value" id="lcBalance">0</div>
+                        <div class="lc-balance-label" id="lcBalanceLabel">баллов</div>
+                    </div>
+                    <div class="lc-hint">1 балл = 1 ₽<br>плати баллами до 30% чека</div>
+                </div>
+            </div>
+
+            <div class="qr-card">
+                <div class="qr-title"><i class="fas fa-qrcode"></i>Покажите QR на кассе</div>
+                <img id="lcQr" alt="QR карты лояльности" loading="lazy">
+                <div class="qr-hint">Нажмите на QR, чтобы сохранить</div>
+            </div>
+
+            <button class="btn btn-outline btn-big" id="refreshCard">
+                <i class="fas fa-rotate"></i>Обновить баланс
+            </button>
+        </div>
+    </section>
+
+    <!-- ======================= ЭКРАН: ВЫПУСК КАРТЫ ======================= -->
+    <section class="view" id="view-issue">
+        <div class="section-title"><i class="fas fa-bolt"></i>Выпуск карты</div>
+        <p class="section-sub">Заполните данные — карта выпустится мгновенно и появится в этом приложении.</p>
+
+        <div class="form-card">
+            <label class="f-label" for="issName">Ваше имя</label>
+            <input class="f-input" id="issName" type="text" maxlength="60" placeholder="Например: Евгений" autocomplete="name">
+
+            <label class="f-label" for="issPhone">Телефон</label>
+            <div class="f-phone"><i class="fas fa-phone"></i>
+                <input class="f-input" id="issPhone" type="tel" inputmode="tel" placeholder="+7 (___) ___-__-__" autocomplete="tel">
+            </div>
+
+            <label class="f-label" for="issEmail">E-mail <span class="f-opt">необязательно</span></label>
+            <input class="f-input" id="issEmail" type="email" maxlength="80" placeholder="you@mail.ru" autocomplete="email">
+
+            <label class="f-label" for="issBirth">Дата рождения <span class="f-opt">необязательно</span></label>
+            <input class="f-input" id="issBirth" type="date">
+
+            <div class="agree-row" id="agreeRow">
+                <label class="agree">
+                    <input type="checkbox" id="agree">
+                    <span class="agree-box"><i class="fas fa-check"></i></span>
+                    <span class="agree-text">Согласен на обработку персональных данных</span>
+                </label>
+            </div>
+
+            <div class="form-error d-none" id="issueError"></div>
+
+            <button class="btn btn-accent btn-big w100" id="issueSubmit">
+                <i class="fas fa-credit-card"></i>Выпустить карту
+            </button>
+            <div class="form-note">Если карта для этого телефона уже выпущена — мы просто покажем её.</div>
+        </div>
+    </section>
+
+    <!-- ======================= ЭКРАН: СТАРАЯ КАРТА ======================= -->
+    <section class="view" id="view-old">
+        <div class="section-title"><i class="fas fa-clock-rotate-left"></i>Старая карта</div>
+        <p class="section-sub">Клиентам до обновления системы: привяжите карту со старым номером, и весь баланс
+            перейдёт на неё.</p>
+
+        <div class="steps">
+            <div class="step"><span class="step-num">1</span>Скопируйте номер старой карты</div>
+            <div class="step"><span class="step-num">2</span>Откройте бота и нажмите «Найти карту»</div>
+            <div class="step"><span class="step-num">3</span>Отправьте номер в ответ на вопрос бота</div>
+        </div>
+
+        <div class="form-card">
+            <label class="f-label" for="oldNumber">Номер старой карты</label>
+            <div class="f-phone"><i class="fas fa-hashtag"></i>
+                <input class="f-input" id="oldNumber" type="text" maxlength="30" placeholder="Например: 245 или L000123">
+            </div>
+
+            <div class="form-error d-none" id="oldError"></div>
+
+            <button class="btn btn-accent btn-big w100" id="oldBind">
+                <i class="fas fa-paper-plane"></i>Привязать в боте
+            </button>
+            <div class="form-note">Номер скопируется в буфер обмена и откроется чат с ботом: нажмите
+                кнопку «Найти карту» и вставьте номер в ответ.</div>
+        </div>
+    </section>
+
+    <!-- ======================= ЭКРАН: МАГАЗИН ======================= -->
+    <section class="view" id="view-store">
+        <div class="section-title"><i class="fas fa-store"></i>О магазине</div>
+
+        <div class="store-card">
+            <div class="store-head">
+                <span class="store-logo"><i class="fas fa-leaf"></i></span>
+                <div>
+                    <div class="store-name" id="storeName"></div>
+                    <div class="store-type">табак · вейп-шоп · кофе с собой</div>
+                </div>
+            </div>
+            <p class="store-about" id="storeAbout"></p>
+
+            <div class="store-rows">
+                <a class="store-row" href="#" id="storeMapHref" target="_blank" rel="noopener">
+                    <span class="store-row-icon"><i class="fas fa-location-dot"></i></span>
+                    <span class="store-row-text" id="storeAddress"></span>
+                    <i class="fas fa-arrow-up-right-from-square store-row-go"></i>
+                </a>
+                <a class="store-row" href="#" id="storePhoneHref">
+                    <span class="store-row-icon"><i class="fas fa-phone"></i></span>
+                    <span class="store-row-text" id="storePhone"></span>
+                    <i class="fas fa-arrow-up-right-from-square store-row-go"></i>
+                </a>
+                <div class="store-row">
+                    <span class="store-row-icon"><i class="fas fa-clock"></i></span>
+                    <span class="store-row-text" id="storeHours"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-card">
+            <div class="map-frame">
+                <iframe id="storeMapWidget" src="about:blank" title="Магазин на карте" loading="lazy"
+                        allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+            </div>
+            <a class="btn btn-outline btn-big w100" id="storeOpenMap" target="_blank" rel="noopener">
+                <i class="fas fa-map-location-dot"></i>Открыть в Яндекс.Картах
+            </a>
+        </div>
+    </section>
+</main>
+
+<!-- ==== Нижняя навигация ==== -->
+<nav class="tabbar" id="tabbar">
+    <button class="tab active" data-tab="card"><i class="fas fa-credit-card"></i><span>Карта</span></button>
+    <button class="tab" data-tab="issue"><i class="fas fa-bolt"></i><span>Выпуск</span></button>
+    <button class="tab" data-tab="old"><i class="fas fa-clock-rotate-left"></i><span>Старая карта</span></button>
+    <button class="tab" data-tab="store"><i class="fas fa-store"></i><span>Магазин</span></button>
+</nav>
+
+<!-- Модалка-просмотр QR -->
+<div class="qr-modal" id="qrModal">
+    <div class="qr-modal-body">
+        <div class="qr-modal-title">Ваша карта</div>
+        <img id="qrModalImg" alt="QR карты">
+        <div class="qr-modal-number" id="qrModalNumber"></div>
+        <button class="btn btn-ghost w100" id="qrModalClose">Закрыть</button>
+    </div>
+</div>
+
+<!-- Тост -->
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script src="js/client-app.js"></script>
+</body>
+</html>

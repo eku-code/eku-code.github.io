@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Loyalty Platform — демо</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/miniapp-demo.css">
+</head>
+<body>
+
+<!-- Экран-заглушка: показывается пока идёт авторизация; если приложение открыто не из
+     Telegram - остаётся с предложением открыть бота (концепция digital_store) -->
+<div id="gate" class="gate">
+    <div class="gate-card">
+        <div class="gate-logo"><i class="fas fa-bolt"></i></div>
+        <div class="gate-title">Loyalty Platform</div>
+        <div class="gate-text" id="gateText">Запускаем приложение…</div>
+        <div class="gate-loader" id="gateLoader"></div>
+        <button class="gate-btn hidden" id="gateBtn"><i class="fas fa-paper-plane"></i> Открыть бота</button>
+    </div>
+</div>
+
+<!-- ==== Верхняя навигация: 3 раздела ==== -->
+<header class="topbar">
+    <div class="topbar-brand">
+        <span class="topbar-logo"><i class="fas fa-bolt"></i></span>
+        <div>
+            <div class="topbar-name">Loyalty Platform</div>
+            <div class="topbar-sub" id="tgUserName">демо для владельцев кофеен и магазинов</div>
+        </div>
+    </div>
+    <nav class="tabs" id="tabs">
+        <button class="tab active" data-tab="demo"><i class="fas fa-desktop"></i><span>Демо</span></button>
+        <button class="tab" data-tab="order"><i class="fas fa-cart-shopping"></i><span>Заказ</span></button>
+        <button class="tab" data-tab="reviews"><i class="fas fa-star"></i><span>Отзывы</span></button>
+    </nav>
+</header>
+
+<!-- ======================= ВКЛАДКА 1: ДЕМО СИСТЕМЫ ======================= -->
+<main class="view active" id="view-demo">
+    <!-- Мини-сайдбар админки -->
+    <div class="admin-frame">
+        <aside class="admin-side">
+            <div class="admin-store">
+                <i class="fas fa-mug-hot"></i>
+                <div>
+                    <div class="admin-store-name">Coffee Bliss</div>
+                    <div class="admin-store-type">кофейня · демо-данные</div>
+                </div>
+            </div>
+            <nav class="admin-nav" id="adminNav">
+                <button class="active" data-page="dash"><i class="fas fa-gauge-high"></i>Дашборд</button>
+                <button data-page="cards"><i class="fas fa-address-card"></i>Карты лояльности</button>
+                <button data-page="cashier"><i class="fas fa-cash-register"></i>Касса</button>
+                <button data-page="analytics"><i class="fas fa-chart-line"></i>Аналитика</button>
+            </nav>
+            <div class="admin-side-note">Это интерактивный слепок интерфейса — данные статические, можно всё прокликать</div>
+        </aside>
+
+        <section class="admin-body">
+            <!-- Дашборд -->
+            <div class="admin-page active" id="page-dash">
+                <h2 class="admin-title">Дашборд</h2>
+                <div class="kpi-grid" id="kpiGrid"></div>
+                <div class="card-block">
+                    <div class="block-head">
+                        <h3>Последние операции</h3>
+                        <span class="chip chip-green">онлайн</span>
+                    </div>
+                    <div class="tx-list" id="txList"></div>
+                </div>
+            </div>
+
+            <!-- Карты -->
+            <div class="admin-page" id="page-cards">
+                <h2 class="admin-title">Карты лояльности</h2>
+                <div class="search-row">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input id="cardSearch" type="text" placeholder="Поиск по имени, телефону или номеру карты...">
+                </div>
+                <div class="table-wrap">
+                    <table class="cards-table">
+                        <thead>
+                        <tr><th>Карта</th><th>Клиент</th><th>Кэшбэк</th><th>Баланс</th><th>Сумма покупок</th><th>Статус</th></tr>
+                        </thead>
+                        <tbody id="cardsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Касса -->
+            <div class="admin-page" id="page-cashier">
+                <h2 class="admin-title">Касса</h2>
+                <div class="cashier-grid">
+                    <div class="card-block">
+                        <h3 class="mb12">Новая операция</h3>
+                        <label class="f-label">Карта клиента</label>
+                        <select id="cashCardSelect" class="f-input"></select>
+                        <label class="f-label">Сумма покупки, ₽</label>
+                        <input id="cashAmount" type="number" class="f-input" placeholder="Например: 850" min="1">
+                        <label class="f-label">Тип операции</label>
+                        <div class="seg" id="cashType">
+                            <button class="active" data-type="PLUS"><i class="fas fa-plus"></i> Начислить</button>
+                            <button data-type="MINUS"><i class="fas fa-minus"></i> Списать</button>
+                        </div>
+                        <button class="btn-accent w100" id="cashSubmit"><i class="fas fa-bolt"></i> Провести</button>
+                        <div class="cash-result d-none" id="cashResult"></div>
+                    </div>
+                    <div class="card-block">
+                        <h3 class="mb12">Карта выбранного клиента</h3>
+                        <div class="mini-loyalty-card" id="cashCardPreview">
+                            <div class="mlc-top"><span class="mlc-brand">COFFEE BLISS</span><span class="mlc-cashback" id="pvCashback">5%</span></div>
+                            <div class="mlc-number" id="pvNumber">—</div>
+                            <div class="mlc-bottom"><span id="pvName">—</span><span id="pvBalance">0 баллов</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Аналитика -->
+            <div class="admin-page" id="page-analytics">
+                <h2 class="admin-title">Аналитика</h2>
+                <div class="card-block">
+                    <div class="block-head"><h3>Выручка по месяцам</h3><span class="chip">за год</span></div>
+                    <div class="bars" id="revenueBars"></div>
+                </div>
+                <div class="an-grid">
+                    <div class="card-block">
+                        <div class="block-head"><h3>Карты по кэшбэку</h3></div>
+                        <div class="hbars" id="cashbackBars"></div>
+                    </div>
+                    <div class="card-block">
+                        <div class="block-head"><h3>Активность по часам</h3><span class="chip">пн–вс</span></div>
+                        <div class="heat" id="heatmap"></div>
+                        <div class="heat-legend"><span>меньше</span><i></i><i></i><i></i><i></i><span>больше</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+
+<!-- ======================= ВКЛАДКА 2: ЗАКАЗ СИСТЕМЫ ======================= -->
+<main class="view" id="view-order">
+    <div class="order-hero">
+        <div class="order-price">
+            <i class="fas fa-star"></i> 4 000
+        </div>
+        <h2>Система лояльности для вашего магазина</h2>
+        <p>Запуск за 1 день · касса и выпуск карт · Telegram-бот для клиентов · аналитика · перенос старой базы</p>
+    </div>
+
+    <div class="order-form card-block">
+        <label class="f-label">Название вашего магазина</label>
+        <input id="orderStoreName" type="text" class="f-input" placeholder="Например: Кофейня «Лаванда»" maxlength="60">
+
+        <label class="f-label">Цвет темы интерфейса</label>
+        <div class="swatches" id="swatches"></div>
+        <div class="custom-color">
+            <input type="color" id="orderCustomColor" value="#7c3aed">
+            <span>свой цвет</span>
+        </div>
+
+        <div class="order-preview">
+            <div class="preview-label">Так будет выглядеть ваша карта</div>
+            <div class="mini-loyalty-card" id="orderPreviewCard">
+                <div class="mlc-top"><span class="mlc-brand" id="opBrand">ВАШ МАГАЗИН</span><span class="mlc-cashback">3%</span></div>
+                <div class="mlc-number">L000001</div>
+                <div class="mlc-bottom"><span>КАРТА КЛИЕНТА</span><span>LOYALTY</span></div>
+            </div>
+        </div>
+
+        <div class="order-error d-none" id="orderError"></div>
+
+        <button class="btn-accent w100 big" id="orderPay">
+            <i class="fas fa-star"></i> Оплатить 4 000 Telegram Stars
+        </button>
+        <div class="order-note">Оплата проходит внутри Telegram. После оплаты мы свяжемся с вами для запуска системы.</div>
+        <div class="order-success d-none" id="orderSuccess">
+            <i class="fas fa-circle-check"></i>
+            <div><b>Заказ создан!</b><br>Завершите оплату или дождитесь подтверждения — мы напишем вам в этот чат.</div>
+        </div>
+    </div>
+</main>
+
+<!-- ======================= ВКЛАДКА 3: ОТЗЫВЫ ======================= -->
+<main class="view" id="view-reviews">
+    <div class="reviews-head">
+        <div class="reviews-score">
+            <div class="big-score">5,0</div>
+            <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+            <div class="score-caption">25 отзывов владельцев</div>
+        </div>
+        <p>Что говорят владельцы кофеен, пекарен и небольших магазинов, уже работающие с системой.</p>
+    </div>
+    <div class="reviews-grid" id="reviewsGrid"></div>
+</main>
+
+<!-- Тост -->
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script src="js/demo-data.js"></script>
+<script src="js/miniapp-demo.js"></script>
+</body>
+</html>
